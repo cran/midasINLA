@@ -1,0 +1,27 @@
+Package: midasINLA
+Title: Spatial MIDAS Models Using INLA
+Version: 0.1.0
+Authors@R: 
+    person(
+        "Stephen Jun", "Villejo",
+        email = "s.villejo@imperial.ac.uk",
+        role = c("aut", "cre")
+    )
+Description: Provides tools for fitting spatial Mixed Data Sampling (MIDAS) regression models using Integrated Nested Laplace Approximation (INLA). The package is designed for settings where responses and explanatory variables are observed at different temporal frequencies and supports both constant and spatially varying regression coefficients.
+License: GPL-3
+Encoding: UTF-8
+RoxygenNote: 8.0.0
+Imports: matrixStats, Matrix, stats
+Suggests: INLA, knitr, rmarkdown, testthat (>= 3.0.0), dplyr, ggplot2,
+        tidyr
+Additional_repositories: https://inla.r-inla-download.org/R/stable
+VignetteBuilder: knitr
+Depends: R (>= 4.2)
+LazyData: true
+Config/testthat/edition: 3
+NeedsCompilation: no
+Packaged: 2026-09-09 09:52:04 UTC; stephenjunvillejo
+Author: Stephen Jun Villejo [aut, cre]
+Maintainer: Stephen Jun Villejo <s.villejo@imperial.ac.uk>
+Repository: CRAN
+Date/Publication: 2026-09-17 12:30:02 UTC
