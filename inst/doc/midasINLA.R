@@ -4,7 +4,16 @@ knitr::opts_chunk$set(
   comment = "#>"
 )
 
-## ----setup--------------------------------------------------------------------
+## ----weights_illustration_almon, echo=FALSE, out.width="90%", fig.cap="Illustration of the MIDAS lag weights for exponential Almon polynomial constraint of order 2.", fig.align="center"----
+knitr::include_graphics("figures/Almon_weights_illustration.png")
+
+## ----weights_illustration_hyperbolic, echo=FALSE, out.width="90%", fig.cap="Illustration of the MIDAS lag weights for hyperbolic scheme polynomial constraint.", fig.align="center"----
+knitr::include_graphics("figures/hyperbolic_weights_illustration.png")
+
+## ----workflow, echo=FALSE, out.width="90%", fig.cap="General workflow.", fig.align="center"----
+knitr::include_graphics("figures/workflow.png")
+
+## ----setup, include = FALSE---------------------------------------------------
 library(midasINLA)
 library(ggplot2)
 library(dplyr)
@@ -14,6 +23,13 @@ has_INLA <- requireNamespace("INLA", quietly = TRUE)
 if (has_INLA) {
   INLA::inla.setOption(num.threads = 1)
 }
+
+## ----loadpackages, eval = FALSE-----------------------------------------------
+# library(midasINLA)
+# library(INLA)
+# library(ggplot2)
+# library(dplyr)
+# library(tidyr)
 
 ## ----load-data, eval = has_INLA-----------------------------------------------
 data("data_spatialpoisson_example")
@@ -89,6 +105,13 @@ result_file <- system.file(
   package = "midasINLA"
 )
 
+if (!nzchar(result_file)) {
+  result_file <- file.path(
+    "..", "inst", "extdata", "vignette_results.rds"
+  )
+}
+
+stopifnot(nzchar(result_file))
 stopifnot(nzchar(result_file))
 
 vignette_results <- readRDS(result_file)
@@ -199,13 +222,21 @@ ggplot(res_weights$hf_2, aes(x = lag, y = mean)) +
   )
 
 ## ----load-prediction-results, include = FALSE---------------------------------
-prediction_results <- readRDS(
-  system.file(
-    "extdata",
-    "vignette_prediction.rds",
-    package = "midasINLA"
-  )
+prediction_file <- system.file(
+  "extdata",
+  "vignette_prediction.rds",
+  package = "midasINLA"
 )
+
+if (!nzchar(prediction_file)) {
+  prediction_file <- file.path(
+    "..", "inst", "extdata", "vignette_prediction.rds"
+  )
+}
+
+stopifnot(file.exists(prediction_file))
+
+prediction_results <- readRDS(prediction_file)
 
 pred_res <- prediction_results$pred_res
 fit_res <- prediction_results$fit_res

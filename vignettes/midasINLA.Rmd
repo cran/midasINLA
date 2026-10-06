@@ -16,18 +16,6 @@ knitr::opts_chunk$set(
 )
 ```
 
-```{r setup}
-library(midasINLA)
-library(ggplot2)
-library(dplyr)
-library(tidyr)
-
-has_INLA <- requireNamespace("INLA", quietly = TRUE)
-if (has_INLA) {
-  INLA::inla.setOption(num.threads = 1)
-}
-```
-
 
 ## Introduction
 
@@ -131,23 +119,33 @@ $$
 
 where $\boldsymbol{\gamma}=(\gamma_1,\gamma_2)$ and $\gamma_2>0$.
 
+The shape of the lag-weight distribution depends on the constraint function and its parameters. The following figures illustrate representative weight profiles for the constraint functions implemented in `midasINLA`.
 
-## INLA implementation
+```{r weights_illustration_almon, echo=FALSE, out.width="90%", fig.cap="Illustration of the MIDAS lag weights for exponential Almon polynomial constraint of order 2.", fig.align="center"}
+knitr::include_graphics("figures/Almon_weights_illustration.png")
+```
+```{r weights_illustration_hyperbolic, echo=FALSE, out.width="90%", fig.cap="Illustration of the MIDAS lag weights for hyperbolic scheme polynomial constraint.", fig.align="center"}
+knitr::include_graphics("figures/hyperbolic_weights_illustration.png")
+```
 
-The MIDAS lag structure is incorporated into the latent Gaussian model through INLA’s `rgeneric` interface. The MIDAS constraint functions define the lag weights as a function of a low-dimensional parameter vector, while the resulting weighted high-frequency covariates are represented as part of the latent model.
+
+
+## Implementation
+
+The MIDAS lag structure is incorporated into the latent Gaussian model through INLA’s `rgeneric` interface. The MIDAS constraint functions define the lag weights as a function of a low-dimensional parameter vector, while the resulting weighted high-frequency covariates are represented as part of the latent field.
 
 The functions in `midasINLA` construct the required `rgeneric` model components and interface them with `INLA::inla()`. This allows the MIDAS lag-weight parameters and regression coefficients to be estimated within the INLA framework, while retaining the spatial structure specified for the regression coefficients.
 
-Users do not need to construct the `rgeneric` model directly; this is handled internally by the package functions demonstrated below.
+Users do not need to construct the `rgeneric` model directly; this is handled internally by the package functions.
+
+The general workflow for fitting and analysing an SDL-MIDAS model using `midasINLA` is shown below: 
+
+```{r workflow, echo=FALSE, out.width="90%", fig.cap="General workflow.", fig.align="center"}
+knitr::include_graphics("figures/workflow.png")
+```
 
 
-## Simulated spatial Poisson example
-
-We show an example with two high-frequency covariates with
-different lag-weight constraints. The first covariate has a spatially
-varying coefficient, whereas the second has a constant coefficient.
-
-The example illustrates the main functions in midasINLA:
+The main functions are:
 
 * `prepare_Minla_spatial`() prepares high-frequency covariates for inclusion
     in the model;
@@ -156,6 +154,32 @@ The example illustrates the main functions in midasINLA:
     coefficients;
 * `compute_weights`() obtains posterior summaries of the MIDAS lag weights;
 * `predict_midas`() generates posterior predictions.
+
+
+## Load packages
+
+```{r setup, include = FALSE}
+library(midasINLA)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+
+has_INLA <- requireNamespace("INLA", quietly = TRUE)
+if (has_INLA) {
+  INLA::inla.setOption(num.threads = 1)
+}
+```
+
+```{r loadpackages, eval = FALSE}
+library(midasINLA)
+library(INLA)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+```
+
+
+## Simulated spatial Poisson example
 
 We consider an outcome $y_{it}$ observed at 16 spatial locations and
 192 time points. Two high-frequency covariates, $x_{1it}$ and $x_{2it}$,
@@ -169,6 +193,27 @@ according to an intrinsic conditional autoregressive (iCAR) model.
 The second covariate uses a Gaussian lag-weight constraint with
 $\gamma_1 = 10$ and $\sqrt{\gamma_2} = 12$ and 45 lags. Its regression
 coefficient is constant across locations.
+
+The data were generated using a Poisson model of the form
+
+$$
+y_{it} \sim \operatorname{Poisson}(\mu_{it}),
+$$
+with
+
+$$
+\log(\mu_{it}) =
+\beta_0 +
+(\beta_1^* + b_i)
+\sum_{k=0}^{29} w_{1k}x_{1i,s(t)-k}
++
+\beta_2
+\sum_{k=0}^{45} w_{2k}x_{2i,s(t)-k},
+$$
+
+where $\boldsymbol{b}$ follows an iCAR model. The true values of the
+parameters are $\beta_0 = 1$, $\beta_1^* = 1.1$, and $\beta_2 = -2$.
+
 
 The simulated data are included with the package and can be loaded using:
 
@@ -205,26 +250,6 @@ g <- INLA::inla.read.graph(
 )
 ```
 
-The data were generated using a Poisson model of the form
-
-$$
-y_{it} \sim \operatorname{Poisson}(\mu_{it}),
-$$
-
-with
-
-$$
-\log(\mu_{it}) =
-\beta_0 +
-(\beta_1^* + b_i)
-\sum_{k=0}^{29} w_{1k}x_{1i,s(t)-k}
-+
-\beta_2
-\sum_{k=0}^{45} w_{2k}x_{2i,s(t)-k},
-$$
-
-where $\boldsymbol{b}$ follows an iCAR model. The true values of the
-parameters are $\beta_0 = 1$, $\beta_1^* = 1.1$, and $\beta_2 = -2$.
 
 
 ## Preparing the MIDAS covariates
@@ -346,6 +371,13 @@ result_file <- system.file(
   package = "midasINLA"
 )
 
+if (!nzchar(result_file)) {
+  result_file <- file.path(
+    "..", "inst", "extdata", "vignette_results.rds"
+  )
+}
+
+stopifnot(nzchar(result_file))
 stopifnot(nzchar(result_file))
 
 vignette_results <- readRDS(result_file)
@@ -513,13 +545,21 @@ to illustrate posterior prediction.
 Posterior predictions can be generated using `predict_midas()`:
 
 ```{r load-prediction-results, include = FALSE}
-prediction_results <- readRDS(
-  system.file(
-    "extdata",
-    "vignette_prediction.rds",
-    package = "midasINLA"
-  )
+prediction_file <- system.file(
+  "extdata",
+  "vignette_prediction.rds",
+  package = "midasINLA"
 )
+
+if (!nzchar(prediction_file)) {
+  prediction_file <- file.path(
+    "..", "inst", "extdata", "vignette_prediction.rds"
+  )
+}
+
+stopifnot(file.exists(prediction_file))
+
+prediction_results <- readRDS(prediction_file)
 
 pred_res <- prediction_results$pred_res
 fit_res <- prediction_results$fit_res

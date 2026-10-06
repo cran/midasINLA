@@ -1,18 +1,56 @@
-# midasINLA
+midasINLA
+================
 
 <!-- badges: start -->
 
 <!-- badges: end -->
 
-`midasINLA` provides tools for fitting mixed-data sampling (MIDAS) regression models using Integrated Nested Laplace Approximation (INLA). The package is designed for settings where the response is observed at a lower frequency than one or more explanatory variables, and supports both constant and spatially varying regression coefficients.
+`midasINLA` provides tools for fitting mixed-data sampling (MIDAS)
+regression models using Integrated Nested Laplace Approximation (INLA).
+The package is designed for settings where the response is observed at a
+lower frequency than one or more explanatory variables, and supports
+both constant and spatially varying regression coefficients.
 
 ## Overview
 
-MIDAS models allow high-frequency covariates to be incorporated into models for lower-frequency responses through weighted distributed lags. midasINLA combines this framework with INLA, allowing MIDAS regression models to be fitted efficiently within a latent Gaussian modelling framework.
+MIDAS models allow high-frequency covariates to be incorporated into
+models for lower-frequency responses through weighted distributed lags.
+`midasINLA` combines this framework with INLA, allowing MIDAS regression
+models to be fitted efficiently within a latent Gaussian modelling
+framework.
+
+The conceptual framework for spatial distributed-lag MIDAS modelling is
+illustrated in the figure below. High-frequency covariates are linked to
+lower-frequency responses through weighted distributed lags, with MIDAS
+coefficients potentially varying across spatial locations.
+
+<div class="figure" style="text-align: center">
+
+<img src="man/figures/schematic_paper.png" alt="Figure 1. Schematic representation of the spatial mixed-frequency setting and the MIDAS aggregation mechanism. (a) Spatial domain with three areal units. (b) Daily high-frequency covariate processes for each unit. (c) Temporal misalignment between daily covariates and weekly outcomes, with the highlighted lag window corresponding to the covariates used to predict the current weekly response. (d) MIDAS-based weighted aggregation of lagged daily covariates into a low-frequency predictor. (e) Weekly low-frequency response process for each spatial unit." width="70%" />
+<p class="caption">
+
+Figure 1. Schematic representation of the spatial mixed-frequency
+setting and the MIDAS aggregation mechanism. (a) Spatial domain with
+three areal units. (b) Daily high-frequency covariate processes for each
+unit. (c) Temporal misalignment between daily covariates and weekly
+outcomes, with the highlighted lag window corresponding to the
+covariates used to predict the current weekly response. (d) MIDAS-based
+weighted aggregation of lagged daily covariates into a low-frequency
+predictor. (e) Weekly low-frequency response process for each spatial
+unit.
+</p>
+
+</div>
 
 ## Installation
 
-The development version of `midasINLA` can be installed from GitHub using `remotes`:
+The latest released version of midasINLA can be installed from CRAN:
+
+``` r
+install.packages("midasINLA")
+```
+
+The development version can be installed from GitHub using `remotes`:
 
 ``` r
 if (!requireNamespace("remotes", quietly = TRUE)) {
@@ -24,7 +62,10 @@ remotes::install_github("stephen-villejo/midasINLA")
 
 ## Getting started
 
-The following example uses the spatial Poisson dataset included with the package.
+The package includes a spatial Poisson dataset illustrating the main
+modelling workflow. A typical analysis involves preparing high-frequency
+covariates, fitting a spatial MIDAS model, and obtaining posterior
+summaries.
 
 ``` r
 library(midasINLA)
@@ -59,98 +100,56 @@ Midas_x2 <- prepare_Minla_spatial(
   svc = FALSE
 )
 
-# Create a response with the final observations held out
-response_data <- data_spatialpoisson_example$data_y
-response_data$y_all <- response_data$y
-response_data[response_data$Time %in% 183:192,"y"] <- NA
-
 # Fit the model
 fit_res <- fit_Minla_spatial(
   formula = y ~ 1,
+  hf_input = list(Midas_x1, Midas_x2),
   data = response_data,
   loc_var = "loc",
   time_var = "Time",
   family = "poisson",
-  hf_input = list(Midas_x1, Midas_x2),
   inla_options = list(
     verbose = FALSE,
     num.threads = 1,
     control.predictor = list(
-          compute = TRUE,
-          link = 1
-        )
+      compute = TRUE,
+      link = 1
+    )
   )
 )
-
-# Posterior summaries
-summary(fit_res$res)
-
-# MIDAS coefficient summaries
-beta_results <- compute_beta_spatial(
-  model = fit_res,
-  n_loc = 16
-)
-
-# MIDAS lag weights
-weights <- compute_weights(fit_res)
-
-# Predictions
-pred_res <- predict_midas(
-  model = fit_res,
-  family = "poisson",
-  Ntrials = NULL,
-  nsamples = 1000
-)
-
 ```
-
-For a complete walkthrough, see the package vignette:
-
-``` r
-vignette("midasINLA", package = "midasINLA")
-```
-
-## Model specification
-
-A MIDAS model incorporates high-frequency covariates through weighted lagged terms. For example, for a response $y_{it}$, a high-frequency covariate $x$ can enter the model through
-```math
-\sum_{k=0}^{K} w_k x_{i,s(t)-k}
-```
-where $w_k$ denotes the MIDAS weight associated with lag $k$, and $s(t)$ denotes the high-frequency time index corresponding to $y_{it}$.
-
-The weights are parameterised using constraint functions, allowing the lag-response pattern to be estimated with substantially fewer parameters than an unconstrained distributed-lag model.
-
-The MIDAS effect can additionally vary across spatial locations, with spatial variation modelled using either an iid or an intrinsic conditional autoregressive (iCAR) prior.
 
 ## Documentation
 
-The package vignette provides a detailed introduction to the modelling workflow:
+For a complete walkthrough, including posterior MIDAS coefficients, lag
+weights, and predictions, see the package vignette:
+
 ``` r
 vignette("midasINLA", package = "midasINLA")
 ```
 
 Individual functions can also be explored using R’s help system:
-`?prepare_Minla_spatial`
-`?fit_Minla_spatial`
-`?compute_beta_spatial`
-`?compute_weights`
-`?predict_midas`
+`?prepare_Minla_spatial` `?fit_Minla_spatial` `?compute_beta_spatial`
+`?compute_weights` `?predict_midas`
 
 ## Applications
 
-midasINLA was developed to facilitate Bayesian modelling of relationships between variables observed at different temporal resolutions, with particular emphasis on applications involving spatial data.
+midasINLA was developed to facilitate Bayesian modelling of
+relationships between variables observed at different temporal
+resolutions, with particular emphasis on applications involving spatial
+data.
 
-The package is particularly useful in environmental epidemiology, climate–health modelling, and other settings where high-frequency exposures need to be linked to lower-frequency outcomes.
+The package is particularly useful in environmental epidemiology,
+climate–health modelling, and other settings where high-frequency
+exposures need to be linked to lower-frequency outcomes.
 
 ## Status
 
-`midasINLA` is currently under development.
+`midasINLA` is under active development. The latest released version is
+available from CRAN.
 
 ## Citation
 
-If you use `midasINLA` in your research, please cite the package and the associated methodological work once the relevant publication is available.
-
-
-
-
-
+If you use `midasINLA` in your research, please cite the package and the
+associated methodological work once the relevant publication is
+available.
